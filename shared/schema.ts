@@ -59,12 +59,14 @@ export const taskCompletions = pgTable("task_completions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull(),
   completedAt: timestamp("completed_at").notNull().defaultNow(),
-  proofPhotos: text("proof_photos").array(), // Array of object storage paths
+  proofPhotos: text("proof_photos").array().notNull().default(sql`ARRAY[]::text[]`), // Array of object storage paths
 });
 
 export const insertTaskCompletionSchema = createInsertSchema(taskCompletions).omit({
   id: true,
   completedAt: true,
+}).extend({
+  proofPhotos: z.array(z.string()).default([]),
 });
 
 export type InsertTaskCompletion = z.infer<typeof insertTaskCompletionSchema>;

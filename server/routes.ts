@@ -183,15 +183,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/tasks/:id/complete - Mark task as complete
-  app.post("/api/tasks/:id/complete", async (req, res) => {
+  // POST /api/tasks/:id/complete - Mark task as complete with optional photo proof
+  app.post("/api/tasks/:id/complete", upload.single('photo'), async (req, res) => {
     try {
       const { id } = req.params;
+      const proofPhotos: string[] = [];
+
+      // If a photo was uploaded, store it in object storage
+      if (req.file) {
+        const { Client } = await import("@replit/object-storage");
+        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+        
+        if (!bucketId) {
+          res.status(500).json({ error: "Object storage is not configured" });
+          return;
+        }
+        
+        const client = new Client({ bucket: bucketId });
+        const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
+        
+        // Generate unique filename with timestamp
+        const timestamp = Date.now();
+        const filename = `${timestamp}-${req.file.originalname}`;
+        const filePath = `${privateDir}/${filename}`;
+        
+        // Upload to object storage
+        const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
+        
+        if (uploadResult.isErr()) {
+          console.error("Error uploading photo:", uploadResult.error);
+          res.status(500).json({ error: "Failed to upload photo" });
+          return;
+        }
+        
+        proofPhotos.push(filename);
+      }
 
       // Create task completion record
       const completion = await storage.createTaskCompletion({
         taskId: id,
-        proofPhotos: [],
+        proofPhotos,
       });
 
       res.json(completion);
@@ -240,21 +271,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Object storage is not configured");
       }
       
-      const client = new Client(bucketId);
+      const client = new Client({ bucket: bucketId });
       
       // Get the path after /api/photos/
       const photoPath = req.path.replace('/api/photos/', '');
       const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
       const fullPath = `${privateDir}/${photoPath}`;
 
-      const fileBytes = await client.downloadAsBytes(fullPath);
+      const result = await client.downloadAsBytes(fullPath);
+      
+      if (result.isErr()) {
+        throw result.error;
+      }
+      
+      const [fileBytes] = result.value;
       
       // Determine content type based on file extension
       const extension = photoPath.split('.').pop()?.toLowerCase();
       const contentType = extension === 'png' ? 'image/png' : 'image/jpeg';
       
       res.set('Content-Type', contentType);
-      res.send(Buffer.from(fileBytes));
+      res.send(fileBytes);
     } catch (error) {
       console.error("Error fetching photo:", error);
       res.status(404).json({ error: "Photo not found" });

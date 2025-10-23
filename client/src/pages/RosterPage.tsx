@@ -81,8 +81,22 @@ export default function RosterPage() {
 
   // Complete task mutation
   const completeTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      const res = await apiRequest('POST', `/api/tasks/${taskId}/complete`);
+    mutationFn: async ({ taskId, file }: { taskId: string; file: File | null }) => {
+      const formData = new FormData();
+      if (file) {
+        formData.append('photo', file);
+      }
+      
+      const res = await fetch(`/api/tasks/${taskId}/complete`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to complete task');
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -146,8 +160,8 @@ export default function RosterPage() {
     overdue: 0, // We can implement overdue logic based on dates if needed
   };
 
-  const handleCompleteTask = (taskId: string) => {
-    completeTaskMutation.mutate(taskId);
+  const handleCompleteTask = (taskId: string, file: File | null) => {
+    completeTaskMutation.mutate({ taskId, file });
   };
 
   const handleDeleteTask = (taskId: string) => {
