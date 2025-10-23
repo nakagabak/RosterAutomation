@@ -29,10 +29,34 @@ export default function TaskCompletionDialog({
 }: TaskCompletionDialogProps) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setUploadedImages(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.type.startsWith('image/')
+    );
+    
+    if (files.length > 0) {
+      setUploadedImages(prev => [...prev, ...files]);
     }
   };
 
@@ -43,14 +67,25 @@ export default function TaskCompletionDialog({
   const handleSubmit = () => {
     if (isCompleted) {
       onComplete(uploadedImages);
-      setIsCompleted(false);
-      setUploadedImages([]);
-      onOpenChange(false);
+      resetState();
     }
   };
 
+  const resetState = () => {
+    setIsCompleted(false);
+    setUploadedImages([]);
+    setIsDragging(false);
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      resetState();
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-task-completion">
         <DialogHeader>
           <DialogTitle>Mark Task as Complete</DialogTitle>
@@ -75,7 +110,14 @@ export default function TaskCompletionDialog({
 
           <div className="space-y-2">
             <Label>Upload Proof (Before/After Photos)</Label>
-            <div className="border-2 border-dashed border-border rounded-md p-8 text-center hover-elevate">
+            <div 
+              className={`border-2 border-dashed rounded-md p-8 text-center hover-elevate transition-colors ${
+                isDragging ? 'border-primary bg-primary/5' : 'border-border'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 id="file-upload"
@@ -126,7 +168,7 @@ export default function TaskCompletionDialog({
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             data-testid="button-cancel"
           >
             Cancel
