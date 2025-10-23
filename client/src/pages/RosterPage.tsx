@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, LogOut, User } from "lucide-react";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import WeekNavigator from "@/components/WeekNavigator";
@@ -13,6 +13,8 @@ import AddTaskDialog from "@/components/AddTaskDialog";
 import ThemeToggle from "@/components/ThemeToggle";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "@/components/ui/badge";
 
 const RESIDENTS = ['Perpetua', 'Eman', 'Allegra', 'Atilla', 'Dania', 'Illy'];
 
@@ -20,6 +22,7 @@ export default function RosterPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const { toast } = useToast();
+  const { user, logoutMutation } = useAuth();
 
   // Fetch current week roster
   const { data: currentWeek, isLoading: isLoadingCurrent } = useQuery({
@@ -172,7 +175,7 @@ export default function RosterPage() {
               <h1 className="text-2xl font-semibold">7SS Cleaning Roster</h1>
               <p className="text-sm text-muted-foreground">First Floor</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <div className="text-sm font-medium">
                 {(currentWeek as any)?.roster?.weekStartDate && (
                   <span>
@@ -180,7 +183,27 @@ export default function RosterPage() {
                   </span>
                 )}
               </div>
+              {user && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="gap-1" data-testid="badge-user">
+                    <User className="h-3 w-3" />
+                    {user.name}
+                  </Badge>
+                  {user.role === 'admin' && (
+                    <Badge variant="default" data-testid="badge-admin">Admin</Badge>
+                  )}
+                </div>
+              )}
               <ThemeToggle />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => logoutMutation.mutate()}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>

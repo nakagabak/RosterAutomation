@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
 import { rotationManager, ALL_RESIDENTS } from "./rotation";
+import { setupAuth } from "./auth";
 import { z } from "zod";
 import { format } from "date-fns";
 
@@ -10,6 +11,9 @@ import { format } from "date-fns";
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication (adds /api/register, /api/login, /api/logout, /api/user)
+  setupAuth(app);
+
   // Initialize current week on server startup
   await rotationManager.ensureCurrentWeekRoster();
 
