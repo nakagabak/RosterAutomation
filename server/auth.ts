@@ -67,31 +67,6 @@ export function setupAuth(app: Express) {
     return sanitized;
   }
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).send("Username already exists");
-      }
-
-      // Force all new registrations to be residents (prevent self-assignment of admin role)
-      const user = await storage.createUser({
-        username: req.body.username,
-        name: req.body.name,
-        password: await hashPassword(req.body.password),
-        role: "resident", // Always resident - admins must be created server-side
-      });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(sanitizeUser(user));
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).send("Registration failed");
-    }
-  });
-
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     res.status(200).json(sanitizeUser(req.user!));
   });
