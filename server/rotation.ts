@@ -1,6 +1,7 @@
 import { startOfWeek, getWeek, getYear } from "date-fns";
 import { storage } from "./storage";
 import type { InsertTask, InsertBathroomAssignment } from "@shared/schema";
+import { sendTaskReminders, type WhatsAppMessage } from "./whatsapp";
 
 // Rotation sequences for main cleaning tasks
 const ROTATION_SEQUENCES = {
@@ -30,7 +31,7 @@ export class RosterRotationManager {
   /**
    * Initialize or get the current week's roster
    */
-  async ensureCurrentWeekRoster() {
+  async ensureCurrentWeekRoster(sendNotifications: boolean = false) {
     const weekStart = this.getCurrentWeekStart();
     let roster = await storage.getCurrentWeekRoster(weekStart);
 
@@ -46,10 +47,15 @@ export class RosterRotationManager {
       });
 
       // Create tasks for this week based on previous week
-      await this.createTasksForWeek(roster.id, weekStart);
+      const tasks = await this.createTasksForWeek(roster.id, weekStart);
 
       // Create bathroom assignments for this week based on previous week
-      await this.createBathroomAssignmentsForWeek(roster.id, weekStart);
+      const bathrooms = await this.createBathroomAssignmentsForWeek(roster.id, weekStart);
+
+      // Send WhatsApp notifications if requested
+      if (sendNotifications) {
+        await this.sendWeeklyReminders(tasks, bathrooms);
+      }
     }
 
     return roster;
@@ -70,8 +76,9 @@ export class RosterRotationManager {
 
   /**
    * Create tasks for a new week based on rotation
+   * Returns the created tasks for notification purposes
    */
-  private async createTasksForWeek(rosterId: string, currentWeekStart: Date) {
+  private async createTasksForWeek(rosterId: string, currentWeekStart: Date): Promise<InsertTask[]> {
     let trashIndex = 0;
     let sweepingIndex = 0;
     let dustingIndex = 0;
@@ -124,12 +131,15 @@ export class RosterRotationManager {
     for (const task of mainTasks) {
       await storage.createTask(task);
     }
+
+    return mainTasks;
   }
 
   /**
    * Create bathroom assignments for a new week
+   * Returns the created assignments for notification purposes
    */
-  private async createBathroomAssignmentsForWeek(rosterId: string, currentWeekStart: Date) {
+  private async createBathroomAssignmentsForWeek(rosterId: string, currentWeekStart: Date): Promise<InsertBathroomAssignment[]> {
     const assignments: InsertBathroomAssignment[] = [];
     const previousRoster = await this.getPreviousWeekRoster(currentWeekStart);
 
@@ -166,6 +176,39 @@ export class RosterRotationManager {
     for (const assignment of assignments) {
       await storage.createBathroomAssignment(assignment);
     }
+
+    return assignments;
+  }
+
+  /**
+   * Send WhatsApp reminders for weekly assignments
+   */
+  private async sendWeeklyReminders(
+    tasks: InsertTask[],
+    bathrooms: InsertBathroomAssignment[]
+  ): Promise<void> {
+    const messages: WhatsAppMessage[] = [];
+
+    // Add main task assignments
+    for (const task of tasks) {
+      messages.push({
+        resident: task.assignedTo,
+        taskName: task.name,
+      });
+    }
+
+    // Add bathroom assignments
+    for (const bathroom of bathrooms) {
+      const taskName = `Bathroom ${bathroom.bathroomNumber} (${bathroom.cleaningMode === "deep" ? "Deep Clean" : "Basic Clean"})`;
+      messages.push({
+        resident: bathroom.assignedTo,
+        taskName,
+      });
+    }
+
+    // Send all reminders
+    const result = await sendTaskReminders(messages);
+    console.log(`Weekly reminders: ${result.sent} sent, ${result.failed} failed`);
   }
 
   /**
