@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Image as ImageIcon, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import ResidentAvatar from "./ResidentAvatar";
 import TaskStatusBadge from "./TaskStatusBadge";
 import TaskCompletionDialog from "./TaskCompletionDialog";
@@ -20,12 +20,11 @@ interface Task {
   assignedTo: string;
   status: "completed" | "pending" | "overdue";
   completedAt?: string;
-  proofCount: number;
 }
 
 interface TaskTableProps {
   tasks: Task[];
-  onComplete: (taskId: string, images: File[]) => void;
+  onComplete: (taskId: string) => void;
   onDelete: (taskId: string) => void;
 }
 
@@ -51,7 +50,6 @@ export default function TaskTable({ tasks, onComplete, onDelete }: TaskTableProp
               <TableHead className="font-semibold">Task Name</TableHead>
               <TableHead className="font-semibold">Assigned To</TableHead>
               <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Proof</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -82,21 +80,6 @@ export default function TaskTable({ tasks, onComplete, onDelete }: TaskTableProp
                   )}
                 </TableCell>
                 <TableCell>
-                  {task.proofCount > 0 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-2"
-                      data-testid={`button-view-proof-${task.id}`}
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                      {task.proofCount} {task.proofCount === 1 ? "photo" : "photos"}
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">No proof</span>
-                  )}
-                </TableCell>
-                <TableCell>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -118,7 +101,7 @@ export default function TaskTable({ tasks, onComplete, onDelete }: TaskTableProp
           onOpenChange={(open) => setCompletionDialog({ open, task: null })}
           taskName={completionDialog.task.name}
           assignedTo={completionDialog.task.assignedTo}
-          onComplete={(images) => onComplete(completionDialog.task!.id, images)}
+          onComplete={() => onComplete(completionDialog.task!.id)}
         />
       )}
     </>

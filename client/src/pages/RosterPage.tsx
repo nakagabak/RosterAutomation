@@ -77,29 +77,16 @@ export default function RosterPage() {
 
   // Complete task mutation
   const completeTaskMutation = useMutation({
-    mutationFn: async ({ taskId, images }: { taskId: string; images: File[] }) => {
-      const formData = new FormData();
-      images.forEach((image) => {
-        formData.append('photos', image);
-      });
-
-      const response = await fetch(`/api/tasks/${taskId}/complete`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to complete task');
-      }
-
-      return response.json();
+    mutationFn: async (taskId: string) => {
+      const res = await apiRequest('POST', `/api/tasks/${taskId}/complete`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/current-week'] });
       queryClient.invalidateQueries({ queryKey: ['/api/history'] });
       toast({
         title: "Task completed",
-        description: "Your task has been marked as complete with proof uploaded.",
+        description: "Your task has been marked as complete.",
       });
     },
     onError: () => {
@@ -150,8 +137,8 @@ export default function RosterPage() {
     overdue: 0, // We can implement overdue logic based on dates if needed
   };
 
-  const handleCompleteTask = (taskId: string, images: File[]) => {
-    completeTaskMutation.mutate({ taskId, images });
+  const handleCompleteTask = (taskId: string) => {
+    completeTaskMutation.mutate(taskId);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -280,9 +267,6 @@ export default function RosterPage() {
                           <div>
                             <p className="font-medium">{task.name}</p>
                             <p className="text-sm text-muted-foreground">{task.assignedTo}</p>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {task.proofCount} {task.proofCount === 1 ? 'photo' : 'photos'}
                           </div>
                         </div>
                       ))}

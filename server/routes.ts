@@ -101,43 +101,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/tasks/:id/complete - Mark task as complete with photo proof
-  app.post("/api/tasks/:id/complete", upload.array("photos", 10), async (req, res) => {
+  // POST /api/tasks/:id/complete - Mark task as complete
+  app.post("/api/tasks/:id/complete", async (req, res) => {
     try {
       const { id } = req.params;
-      const files = req.files as Express.Multer.File[];
-
-      // Upload photos to object storage
-      const photoUrls: string[] = [];
-      
-      if (files && files.length > 0) {
-        const { Client } = await import("@replit/object-storage");
-        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-        
-        if (!bucketId) {
-          throw new Error("Object storage is not configured");
-        }
-        
-        const client = new Client(bucketId);
-
-        // Use PRIVATE_OBJECT_DIR if defined, otherwise use a safe default
-        const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
-
-        for (const file of files) {
-          const timestamp = Date.now();
-          const randomId = Math.random().toString(36).substring(7);
-          const filename = `task-${id}-${timestamp}-${randomId}.${file.mimetype.split('/')[1]}`;
-          const path = `${privateDir}/${filename}`;
-
-          await client.uploadFromBytes(path, file.buffer);
-          photoUrls.push(path);
-        }
-      }
 
       // Create task completion record
       const completion = await storage.createTaskCompletion({
         taskId: id,
-        proofPhotos: photoUrls,
+        proofPhotos: [],
       });
 
       res.json(completion);
