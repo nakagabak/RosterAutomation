@@ -26,9 +26,10 @@ interface TaskTableProps {
   tasks: Task[];
   onComplete: (taskId: string, file: File | null) => void;
   onDelete: (taskId: string) => void;
+  isAdmin?: boolean;
 }
 
-export default function TaskTable({ tasks, onComplete, onDelete }: TaskTableProps) {
+export default function TaskTable({ tasks, onComplete, onDelete, isAdmin = false }: TaskTableProps) {
   const [completionDialog, setCompletionDialog] = useState<{ open: boolean; task: Task | null }>({
     open: false,
     task: null
@@ -80,14 +81,16 @@ export default function TaskTable({ tasks, onComplete, onDelete }: TaskTableProp
                   )}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDelete(task.id)}
-                    data-testid={`button-delete-task-${task.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(task.id)}
+                      data-testid={`button-delete-task-${task.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

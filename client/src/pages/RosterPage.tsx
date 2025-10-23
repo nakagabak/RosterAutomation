@@ -146,13 +146,8 @@ export default function RosterPage() {
     },
   });
 
-  const allTasks = (currentWeek as any)?.tasks || [];
+  const tasks = (currentWeek as any)?.tasks || [];
   const bathrooms = (currentWeek as any)?.bathrooms || [];
-
-  // Filter tasks based on user role - residents only see their own tasks
-  const tasks = user?.role === 'admin' 
-    ? allTasks 
-    : allTasks.filter((t: any) => t.assignedTo === user?.name);
 
   const stats = {
     completed: tasks.filter((t: any) => t.status === 'completed').length,
@@ -256,15 +251,18 @@ export default function RosterPage() {
           <TabsContent value="current" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Weekly Tasks</h2>
-              <Button onClick={() => setAddTaskOpen(true)} data-testid="button-add-task">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Task
-              </Button>
+              {user?.role === 'admin' && (
+                <Button onClick={() => setAddTaskOpen(true)} data-testid="button-add-task">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Task
+                </Button>
+              )}
             </div>
             <TaskTable
               tasks={tasks}
               onComplete={handleCompleteTask}
               onDelete={handleDeleteTask}
+              isAdmin={user?.role === 'admin'}
             />
           </TabsContent>
 
