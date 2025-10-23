@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut, User } from "lucide-react";
+import { Plus, LogOut, User, Settings } from "lucide-react";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import WeekNavigator from "@/components/WeekNavigator";
@@ -15,6 +15,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 const RESIDENTS = ['Perpetua', 'Eman', 'Allegra', 'Atilla', 'Dania', 'Illy'];
 
@@ -184,15 +185,25 @@ export default function RosterPage() {
                 )}
               </div>
               {user && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="gap-1" data-testid="badge-user">
-                    <User className="h-3 w-3" />
-                    {user.name}
-                  </Badge>
+                <>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="gap-1" data-testid="badge-user">
+                      <User className="h-3 w-3" />
+                      {user.name}
+                    </Badge>
+                    {user.role === 'admin' && (
+                      <Badge variant="default" data-testid="badge-admin">Admin</Badge>
+                    )}
+                  </div>
                   {user.role === 'admin' && (
-                    <Badge variant="default" data-testid="badge-admin">Admin</Badge>
+                    <Link href="/admin">
+                      <Button variant="outline" size="sm" data-testid="button-admin-dashboard">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Admin Dashboard
+                      </Button>
+                    </Link>
                   )}
-                </div>
+                </>
               )}
               <ThemeToggle />
               <Button
