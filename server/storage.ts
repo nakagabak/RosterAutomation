@@ -37,7 +37,10 @@ export interface IStorage {
 
   // Tasks
   getTasksForRoster(rosterId: string): Promise<Task[]>;
+  getAllTasks(): Promise<Task[]>;
+  getTasksByUser(username: string, rosterId?: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
+  updateTask(taskId: string, updates: Partial<InsertTask>): Promise<Task | undefined>;
   deleteTask(taskId: string): Promise<void>;
   getTaskById(taskId: string): Promise<Task | undefined>;
 
@@ -106,8 +109,31 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(tasks).where(eq(tasks.rosterId, rosterId));
   }
 
+  async getAllTasks(): Promise<Task[]> {
+    return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  }
+
+  async getTasksByUser(username: string, rosterId?: string): Promise<Task[]> {
+    if (rosterId) {
+      return await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.assignedTo, username), eq(tasks.rosterId, rosterId)));
+    }
+    return await db.select().from(tasks).where(eq(tasks.assignedTo, username));
+  }
+
   async createTask(task: InsertTask): Promise<Task> {
     const result = await db.insert(tasks).values(task).returning();
+    return result[0];
+  }
+
+  async updateTask(taskId: string, updates: Partial<InsertTask>): Promise<Task | undefined> {
+    const result = await db
+      .update(tasks)
+      .set(updates)
+      .where(eq(tasks.id, taskId))
+      .returning();
     return result[0];
   }
 

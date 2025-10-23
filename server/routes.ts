@@ -10,8 +10,27 @@ import { format } from "date-fns";
 // Configure multer for memory storage (we'll upload to object storage)
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Middleware to check if user is authenticated
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  next();
+}
+
+// Middleware to check if user is admin
+function requireAdmin(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up authentication (adds /api/register, /api/login, /api/logout, /api/user)
+  // Set up authentication (adds /api/login, /api/logout, /api/user)
   setupAuth(app);
 
   // Initialize current week on server startup
@@ -63,8 +82,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/tasks - Create a custom task
-  app.post("/api/tasks", async (req, res) => {
+  // GET /api/users - Get all users (admin only)
+  app.get("/api/users", requireAdmin, async (_req, res) => {
+    try {
+      const usersList = ALL_RESIDENTS.map(name => ({ name }));
+      res.json(usersList);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // GET /api/admin/tasks - Get all tasks (admin only)
+  app.get("/api/admin/tasks", requireAdmin, async (_req, res) => {
+    try {
+      const allTasks = await storage.getAllTasks();
+      const completions = await storage.getAllCompletions();
+      
+      const tasksWithStatus = allTasks.map(task => ({
+        ...task,
+        status: completions.some(c => c.taskId === task.id) ? 'completed' : 'pending',
+        completion: completions.find(c => c.taskId === task.id),
+      }));
+      
+      res.json(tasksWithStatus);
+    } catch (error) {
+      console.error("Error fetching all tasks:", error);
+      res.status(500).json({ error: "Failed to fetch tasks" });
+    }
+  });
+
+  // POST /api/tasks - Create a custom task (admin only)
+  app.post("/api/tasks", requireAdmin, async (req, res) => {
     try {
       const schema = z.object({
         name: z.string().min(1),
@@ -93,8 +142,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DELETE /api/tasks/:id - Delete a task
-  app.delete("/api/tasks/:id", async (req, res) => {
+  // PUT /api/tasks/:id - Update a task (admin only)
+  app.put("/api/tasks/:id", requireAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1).optional(),
+        assignedTo: z.string().min(1).optional(),
+      });
+
+      const { id } = req.params;
+      const updates = schema.parse(req.body);
+
+      const updated = await storage.updateTask(id, updates);
+      
+      if (!updated) {
+        res.status(404).json({ error: "Task not found" });
+        return;
+      }
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid request data", details: error.errors });
+      } else {
+        console.error("Error updating task:", error);
+        res.status(500).json({ error: "Failed to update task" });
+      }
+    }
+  });
+
+  // DELETE /api/tasks/:id - Delete a task (admin only)
+  app.delete("/api/tasks/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteTask(id);
