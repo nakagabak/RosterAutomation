@@ -16,6 +16,9 @@ const BATHROOM_ROTATIONS = {
   3: ["Atilla", "Illy"],
 };
 
+// All valid residents
+export const ALL_RESIDENTS = ["Perpetua", "Eman", "Allegra", "Atilla", "Dania", "Illy"];
+
 export class RosterRotationManager {
   /**
    * Get the start of the current week (Monday)
@@ -42,31 +45,42 @@ export class RosterRotationManager {
         year,
       });
 
-      // Get the previous week's roster to determine rotation indices
-      const allRosters = await storage.getAllWeeklyRosters();
-      const previousRoster = allRosters.find(r => r.id !== roster!.id);
+      // Create tasks for this week based on previous week
+      await this.createTasksForWeek(roster.id, weekStart);
 
-      // Create tasks for this week
-      await this.createTasksForWeek(roster.id, previousRoster?.id);
-
-      // Create bathroom assignments for this week
-      await this.createBathroomAssignmentsForWeek(roster.id, previousRoster?.id);
+      // Create bathroom assignments for this week based on previous week
+      await this.createBathroomAssignmentsForWeek(roster.id, weekStart);
     }
 
     return roster;
   }
 
   /**
+   * Get the previous week's roster (most recent roster before current week)
+   */
+  private async getPreviousWeekRoster(currentWeekStart: Date): Promise<WeeklyRoster | undefined> {
+    const allRosters = await storage.getAllWeeklyRosters();
+    // Filter rosters that are before the current week
+    const previousRosters = allRosters.filter(
+      r => new Date(r.weekStartDate) < currentWeekStart
+    );
+    // Return the most recent one (first in the sorted list)
+    return previousRosters[0];
+  }
+
+  /**
    * Create tasks for a new week based on rotation
    */
-  private async createTasksForWeek(rosterId: string, previousRosterId?: string) {
+  private async createTasksForWeek(rosterId: string, currentWeekStart: Date) {
     let trashIndex = 0;
     let sweepingIndex = 0;
     let dustingIndex = 0;
 
-    // If there's a previous week, get the rotation indices
-    if (previousRosterId) {
-      const previousTasks = await storage.getTasksForRoster(previousRosterId);
+    // Get the previous week's roster
+    const previousRoster = await this.getPreviousWeekRoster(currentWeekStart);
+    
+    if (previousRoster) {
+      const previousTasks = await storage.getTasksForRoster(previousRoster.id);
       const trashTask = previousTasks.find(t => t.name === "Take Out Trash & Replace Bag");
       const sweepTask = previousTasks.find(t => t.name === "Sweep/Vacuum & Mop Floors");
       const dustTask = previousTasks.find(t => t.name === "Dust & Wipe Surfaces");
@@ -115,16 +129,17 @@ export class RosterRotationManager {
   /**
    * Create bathroom assignments for a new week
    */
-  private async createBathroomAssignmentsForWeek(rosterId: string, previousRosterId?: string) {
+  private async createBathroomAssignmentsForWeek(rosterId: string, currentWeekStart: Date) {
     const assignments: InsertBathroomAssignment[] = [];
+    const previousRoster = await this.getPreviousWeekRoster(currentWeekStart);
 
     for (let bathroomNum = 1; bathroomNum <= 3; bathroomNum++) {
       let rotationIndex = 0;
       let cleaningMode: "basic" | "deep" = "deep";
 
       // If there's a previous week, rotate the assignment and alternate cleaning mode
-      if (previousRosterId) {
-        const previousAssignments = await storage.getBathroomAssignmentsForRoster(previousRosterId);
+      if (previousRoster) {
+        const previousAssignments = await storage.getBathroomAssignmentsForRoster(previousRoster.id);
         const previousAssignment = previousAssignments.find(
           a => a.bathroomNumber === bathroomNum
         );

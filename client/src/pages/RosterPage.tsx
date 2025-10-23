@@ -34,10 +34,8 @@ export default function RosterPage() {
   // Add task mutation
   const addTaskMutation = useMutation({
     mutationFn: async ({ name, assignedTo }: { name: string; assignedTo: string }) => {
-      return await apiRequest('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify({ name, assignedTo }),
-      });
+      const res = await apiRequest('POST', '/api/tasks', { name, assignedTo });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/current-week'] });
@@ -58,9 +56,8 @@ export default function RosterPage() {
   // Delete task mutation
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      return await apiRequest(`/api/tasks/${taskId}`, {
-        method: 'DELETE',
-      });
+      const res = await apiRequest('DELETE', `/api/tasks/${taskId}`);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/current-week'] });
@@ -125,10 +122,8 @@ export default function RosterPage() {
       assignedTo: string; 
       cleaningMode: 'basic' | 'deep' 
     }) => {
-      return await apiRequest(`/api/bathrooms/${bathroomId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ assignedTo, cleaningMode }),
-      });
+      const res = await apiRequest('PUT', `/api/bathrooms/${bathroomId}`, { assignedTo, cleaningMode });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/current-week'] });
@@ -146,8 +141,8 @@ export default function RosterPage() {
     },
   });
 
-  const tasks = currentWeek?.tasks || [];
-  const bathrooms = currentWeek?.bathrooms || [];
+  const tasks = (currentWeek as any)?.tasks || [];
+  const bathrooms = (currentWeek as any)?.bathrooms || [];
 
   const stats = {
     completed: tasks.filter((t: any) => t.status === 'completed').length,
@@ -192,9 +187,9 @@ export default function RosterPage() {
             </div>
             <div className="flex items-center gap-2">
               <div className="text-sm font-medium">
-                {currentWeek?.roster?.weekStartDate && (
+                {(currentWeek as any)?.roster?.weekStartDate && (
                   <span>
-                    Week {currentWeek.roster.weekNumber}, {currentWeek.roster.year}
+                    Week {(currentWeek as any).roster.weekNumber}, {(currentWeek as any).roster.year}
                   </span>
                 )}
               </div>
@@ -267,9 +262,9 @@ export default function RosterPage() {
               <div className="border border-border rounded-md p-12 text-center">
                 <p className="text-muted-foreground">Loading history...</p>
               </div>
-            ) : history && history.length > 0 ? (
+            ) : (history as any) && (history as any).length > 0 ? (
               <div className="space-y-6">
-                {history.map((week: any) => (
+                {(history as any).map((week: any) => (
                   <div key={week.id} className="border border-border rounded-md p-6">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold">

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { rotationManager } from "./rotation";
+import { rotationManager, ALL_RESIDENTS } from "./rotation";
 import { z } from "zod";
 import { format } from "date-fns";
 
@@ -114,11 +114,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { Client } = await import("@replit/object-storage");
         const client = new Client();
 
+        // Use PRIVATE_OBJECT_DIR if defined, otherwise use a safe default
+        const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
+
         for (const file of files) {
           const timestamp = Date.now();
           const randomId = Math.random().toString(36).substring(7);
           const filename = `task-${id}-${timestamp}-${randomId}.${file.mimetype.split('/')[1]}`;
-          const path = `${process.env.PRIVATE_OBJECT_DIR}/${filename}`;
+          const path = `${privateDir}/${filename}`;
 
           await client.uploadFromBytes(path, file.buffer);
           photoUrls.push(path);
@@ -142,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/bathrooms/:id", async (req, res) => {
     try {
       const schema = z.object({
-        assignedTo: z.string().min(1),
+        assignedTo: z.enum(ALL_RESIDENTS as [string, ...string[]]),
         cleaningMode: z.enum(["basic", "deep"]),
       });
 
@@ -175,7 +178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the path after /api/photos/
       const photoPath = req.path.replace('/api/photos/', '');
-      const fullPath = `${process.env.PRIVATE_OBJECT_DIR}/${photoPath}`;
+      const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
+      const fullPath = `${privateDir}/${photoPath}`;
 
       const fileBytes = await client.downloadAsBytes(fullPath);
       
