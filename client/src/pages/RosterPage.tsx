@@ -132,8 +132,13 @@ export default function RosterPage() {
     },
   });
 
-  const tasks = (currentWeek as any)?.tasks || [];
+  const allTasks = (currentWeek as any)?.tasks || [];
   const bathrooms = (currentWeek as any)?.bathrooms || [];
+
+  // Filter tasks based on user role - residents only see their own tasks
+  const tasks = user?.role === 'admin' 
+    ? allTasks 
+    : allTasks.filter((t: any) => t.assignedTo === user?.name);
 
   const stats = {
     completed: tasks.filter((t: any) => t.status === 'completed').length,
