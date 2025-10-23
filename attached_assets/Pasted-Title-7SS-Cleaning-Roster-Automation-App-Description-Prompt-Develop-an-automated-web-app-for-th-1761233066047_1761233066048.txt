@@ -1,0 +1,100 @@
+Title: 7SS Cleaning Roster Automation App
+
+Description / Prompt:
+Develop an automated web app for the first floor of 7SS that manages weekly cleaning duties (Friday–Sunday) with automatic task rotation, photo uploads for proof, and editable sections for flexible task management — including a separate, editable bathroom rotation panel.
+
+🧭 Core Features
+1. Weekly Cleaning Roster Display
+
+Show all cleaning duties in a table view:
+
+Take Out Trash & Replace Bag
+
+Sweep/Vacuum & Mop Floors
+
+Dust & Wipe Surfaces
+
+Cleaning & Trash (Bathrooms)
+
+Automatically assign residents weekly based on a defined rotation.
+
+Display both current and past weeks.
+
+2. Rotation Logic (Fixed + Automated)
+
+Take Out Trash & Replace Bag: Perpetua → Eman → Allegra → repeat
+
+Sweep/Vacuum & Mop Floors: Atilla → Dania → Illy → Eman → repeat
+
+Dust & Wipe Surfaces: Illy → Allegra → Atilla → Perpetua → repeat
+
+🚿 Editable Bathroom Section
+
+Dedicated “Bathroom Rotation” panel for admin or designated residents.
+
+Default rotation:
+
+Bathroom 1 – Eman → Allegra
+
+Bathroom 2 – Perpetua → Dania
+
+Bathroom 3 – Atilla → Illy
+(alternate between deep and basic cleaning each week)
+
+Features:
+
+Users can edit who is assigned to each bathroom directly from the app.
+
+Option to add new bathrooms or remove existing ones.
+
+Changes are saved to the database and automatically applied to next week’s rotation.
+
+Include toggle for cleaning mode (Basic ↔ Deep).
+
+📸 Completion Tracking & Proof Upload
+
+Checkbox or toggle for “Mark as Done.”
+
+Upload image proof of cleaning (before/after).
+
+Store proof image paths in the backend (local folder or Firebase Storage).
+
+Display thumbnails or “View Proof” links beside each completed task.
+
+Save timestamps and completion status for accountability.
+
+➕ Task Management
+
+Add new custom tasks (e.g., “Clean balcony,” “Disinfect fridge”).
+
+Assign resident(s) manually or through rotation.
+
+Remove existing tasks easily.
+
+All changes persist via local database or cloud backend.
+
+⚙️ Automation
+
+Automatic week advancement every Monday.
+
+No manual updates required.
+
+Store all data persistently (task list, proofs, bathroom edits, status logs).
+
+💻 Tech Stack (suggested)
+
+Frontend: HTML + CSS + JavaScript (React optional)
+
+Backend: Flask (Python) or Node.js (Express)
+
+Database: SQLite / JSON / Firebase Realtime DB
+
+Image Upload: Local /uploads folder or Firebase Storage
+
+🧩 Optional Enhancements
+
+Email or Telegram reminder every Friday.
+
+Export weekly summaries as PDF/CSV.
+
+Role-based access (admin vs resident).
