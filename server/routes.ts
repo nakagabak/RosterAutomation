@@ -112,7 +112,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (files && files.length > 0) {
         const { Client } = await import("@replit/object-storage");
-        const client = new Client();
+        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+        
+        if (!bucketId) {
+          throw new Error("Object storage is not configured");
+        }
+        
+        const client = new Client(bucketId);
 
         // Use PRIVATE_OBJECT_DIR if defined, otherwise use a safe default
         const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
@@ -174,7 +180,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/photos/*", async (req, res) => {
     try {
       const { Client } = await import("@replit/object-storage");
-      const client = new Client();
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      
+      if (!bucketId) {
+        throw new Error("Object storage is not configured");
+      }
+      
+      const client = new Client(bucketId);
       
       // Get the path after /api/photos/
       const photoPath = req.path.replace('/api/photos/', '');
