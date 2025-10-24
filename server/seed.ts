@@ -11,7 +11,6 @@ async function hashPassword(password: string) {
 }
 
 const FIXED_ACCOUNTS = [
-  { username: "nurilly", name: "Nurilly", role: "admin" as const },
   { username: "illy", name: "Illy", role: "resident" as const },
   { username: "atilla", name: "Atilla", role: "resident" as const },
   { username: "allegra", name: "Allegra", role: "resident" as const },
@@ -31,7 +30,7 @@ export async function seedUsers() {
       continue;
     }
 
-    // Default password is the same as username for simplicity
+    // Default password is the same as username for passwordless login
     const hashedPassword = await hashPassword(account.username);
     
     await storage.createUser({
