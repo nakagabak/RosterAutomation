@@ -207,13 +207,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/tasks/:id/complete - Mark task as complete with optional photo proof
+  // POST /api/tasks/:id/complete - Mark task as complete with required photo proof
   app.post("/api/tasks/:id/complete", upload.single('photo'), async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Photo is required for task completion
+      if (!req.file) {
+        res.status(400).json({ error: "Photo proof is required to complete a task" });
+        return;
+      }
+      
       const proofPhotos: string[] = [];
 
-      // If a photo was uploaded, store it in object storage
+      // Store photo in object storage
       if (req.file) {
         const { Client } = await import("@replit/object-storage");
         const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
@@ -251,21 +258,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         proofPhotos,
       });
 
-      // Send WhatsApp notification if photo was uploaded
-      if (proofPhotos.length > 0 && req.user) {
-        const { sendCompletionPhotoToWhatsApp } = await import("./whatsapp");
-        const host = req.get('host') || 'localhost:5000';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const photoUrl = `${protocol}://${host}/api/photos/${proofPhotos[0]}`;
-        
-        // Send notification asynchronously (don't wait for it)
-        sendCompletionPhotoToWhatsApp({
-          residentName: req.user.name,
-          photoUrl,
-          fileName: proofPhotos[0],
-        }).catch(err => console.error("WhatsApp notification error:", err));
-      }
-
       res.json(completion);
     } catch (error) {
       console.error("Error completing task:", error);
@@ -302,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/bathrooms/:id/complete - Mark bathroom as complete with optional photo
+  // POST /api/bathrooms/:id/complete - Mark bathroom as complete with required photo
   app.post("/api/bathrooms/:id/complete", requireAuth, upload.single('photo'), async (req, res) => {
     try {
       const { id } = req.params;
@@ -320,6 +312,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(403).json({ error: "You can only complete bathrooms assigned to you" });
         return;
       }
+      
+      // Photo is required for bathroom completion
+      if (!req.file) {
+        res.status(400).json({ error: "Photo proof is required to complete bathroom cleaning" });
+        return;
+      }
+      
       const { Client } = await import("@replit/object-storage");
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
       
@@ -356,21 +355,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!completed) {
         res.status(404).json({ error: "Bathroom assignment not found" });
         return;
-      }
-
-      // Send WhatsApp notification if photo was uploaded
-      if (proofPhotos.length > 0 && req.user) {
-        const { sendCompletionPhotoToWhatsApp } = await import("./whatsapp");
-        const host = req.get('host') || 'localhost:5000';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const photoUrl = `${protocol}://${host}/api/photos/${proofPhotos[0]}`;
-        
-        // Send notification asynchronously (don't wait for it)
-        sendCompletionPhotoToWhatsApp({
-          residentName: req.user.name,
-          photoUrl,
-          fileName: proofPhotos[0],
-        }).catch(err => console.error("WhatsApp notification error:", err));
       }
 
       res.json(completed);

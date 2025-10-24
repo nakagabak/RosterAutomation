@@ -11,6 +11,7 @@ import TaskTable from "@/components/TaskTable";
 import BathroomCard from "@/components/BathroomCard";
 import AddTaskDialog from "@/components/AddTaskDialog";
 import ThemeToggle from "@/components/ThemeToggle";
+import PhotoGallery from "@/components/PhotoGallery";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -94,7 +95,8 @@ export default function RosterPage() {
       });
       
       if (!res.ok) {
-        throw new Error('Failed to complete task');
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to complete task');
       }
       
       return res.json();
@@ -107,10 +109,10 @@ export default function RosterPage() {
         description: "Your task has been marked as complete.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to complete task. Please try again.",
+        description: error.message || "Failed to complete task. Please try again.",
         variant: "destructive",
       });
     },
@@ -170,10 +172,10 @@ export default function RosterPage() {
         description: "Bathroom marked as complete!",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to complete bathroom. Please try again.",
+        description: error.message || "Failed to complete bathroom. Please try again.",
         variant: "destructive",
       });
     },
@@ -302,6 +304,8 @@ export default function RosterPage() {
               isAdmin={user?.role === 'admin'}
               currentUserName={user?.name}
             />
+            
+            <PhotoGallery currentWeek={currentWeek} />
           </TabsContent>
 
           <TabsContent value="bathrooms" className="space-y-4">

@@ -57,7 +57,7 @@ export default function TaskCompletionDialog({
   };
 
   const handleSubmit = () => {
-    if (isCompleted) {
+    if (isCompleted && selectedFile) {
       onComplete(selectedFile);
       setIsCompleted(false);
       setSelectedFile(null);
@@ -100,7 +100,7 @@ export default function TaskCompletionDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Upload proof photo (optional)</Label>
+            <Label>Upload proof photo (required)</Label>
             
             {!selectedFile ? (
               <div
@@ -168,7 +168,7 @@ export default function TaskCompletionDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isCompleted}
+            disabled={!isCompleted || !selectedFile}
             data-testid="button-submit-completion"
           >
             Mark Complete

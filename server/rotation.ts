@@ -1,6 +1,6 @@
 import { startOfWeek, getWeek, getYear } from "date-fns";
 import { storage } from "./storage";
-import type { InsertTask, InsertBathroomAssignment } from "@shared/schema";
+import type { InsertTask, InsertBathroomAssignment, WeeklyRoster } from "@shared/schema";
 
 // Rotation sequences for main cleaning tasks
 const ROTATION_SEQUENCES = {
@@ -200,6 +200,9 @@ export class RosterRotationManager {
         bathroomNumber: b.bathroomNumber,
         assignedTo: b.assignedTo,
         cleaningMode: b.cleaningMode,
+        completedAt: b.completedAt,
+        proofCount: b.proofPhotos?.length || 0,
+        proofPhotos: b.proofPhotos || [],
       })),
     };
   }
