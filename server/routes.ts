@@ -199,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
         
-        const client = new Client({ bucket: bucketId });
+        const client = new Client({ bucketId });
         const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
         
         // Generate unique filename with timestamp
@@ -224,6 +224,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taskId: id,
         proofPhotos,
       });
+
+      // Send WhatsApp notification if photo was uploaded
+      if (proofPhotos.length > 0 && req.user) {
+        const { sendCompletionPhotoToWhatsApp } = await import("./whatsapp");
+        const host = req.get('host') || 'localhost:5000';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const photoUrl = `${protocol}://${host}/api/photos/${proofPhotos[0]}`;
+        
+        // Send notification asynchronously (don't wait for it)
+        sendCompletionPhotoToWhatsApp({
+          residentName: req.user.name,
+          photoUrl,
+          fileName: proofPhotos[0],
+        }).catch(err => console.error("WhatsApp notification error:", err));
+      }
 
       res.json(completion);
     } catch (error) {
@@ -315,6 +330,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Send WhatsApp notification if photo was uploaded
+      if (proofPhotos.length > 0 && req.user) {
+        const { sendCompletionPhotoToWhatsApp } = await import("./whatsapp");
+        const host = req.get('host') || 'localhost:5000';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const photoUrl = `${protocol}://${host}/api/photos/${proofPhotos[0]}`;
+        
+        // Send notification asynchronously (don't wait for it)
+        sendCompletionPhotoToWhatsApp({
+          residentName: req.user.name,
+          photoUrl,
+          fileName: proofPhotos[0],
+        }).catch(err => console.error("WhatsApp notification error:", err));
+      }
+
       res.json(completed);
     } catch (error) {
       console.error("Error completing bathroom:", error);
@@ -332,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error("Object storage is not configured");
       }
       
-      const client = new Client({ bucket: bucketId });
+      const client = new Client({ bucketId });
       
       // Get the path after /api/photos/
       const photoPath = req.path.replace('/api/photos/', '');
