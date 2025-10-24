@@ -29,6 +29,30 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
+// Helper to extract relative directory path from PRIVATE_OBJECT_DIR
+function getPrivateDir(): string {
+  let dir = process.env.PRIVATE_OBJECT_DIR || ".private";
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  
+  // Remove trailing slashes
+  dir = dir.replace(/\/+$/, '');
+  
+  // If bucketId is present, remove bucket prefix (with or without leading slash)
+  if (bucketId) {
+    if (dir.startsWith(`/${bucketId}`)) {
+      dir = dir.substring(`/${bucketId}`.length);
+    } else if (dir.startsWith(bucketId)) {
+      dir = dir.substring(bucketId.length);
+    }
+  }
+  
+  // Remove leading slash if present
+  dir = dir.replace(/^\//, '');
+  
+  // If dir is empty, return empty string (photos will be at bucket root)
+  return dir || '';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication (adds /api/login, /api/logout, /api/user)
   setupAuth(app);
@@ -200,12 +224,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const client = new Client({ bucketId });
-        const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
+        
+        // Get the private directory path (relative to bucket root)
+        const privateDir = getPrivateDir();
         
         // Generate unique filename with timestamp
         const timestamp = Date.now();
         const filename = `${timestamp}-${req.file.originalname}`;
-        const filePath = `${privateDir}/${filename}`;
+        const filePath = privateDir ? `${privateDir}/${filename}` : filename;
         
         // Upload to object storage
         const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
@@ -302,7 +328,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const client = new Client({ bucketId });
-      const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
+      
+      // Get the private directory path (relative to bucket root)
+      const privateDir = getPrivateDir();
       
       const proofPhotos: string[] = [];
       
@@ -310,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.file) {
         const timestamp = Date.now();
         const filename = `${timestamp}-${req.file.originalname}`;
-        const filePath = `${privateDir}/${filename}`;
+        const filePath = privateDir ? `${privateDir}/${filename}` : filename;
         
         const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
         
@@ -366,8 +394,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the path after /api/photos/
       const photoPath = req.path.replace('/api/photos/', '');
-      const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
-      const fullPath = `${privateDir}/${photoPath}`;
+      
+      // Get the private directory path (relative to bucket root)
+      const privateDir = getPrivateDir();
+      
+      const fullPath = privateDir ? `${privateDir}/${photoPath}` : photoPath;
 
       const result = await client.downloadAsBytes(fullPath);
       
