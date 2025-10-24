@@ -261,6 +261,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/bathrooms/:id/complete - Mark bathroom as complete with optional photo
+  app.post("/api/bathrooms/:id/complete", requireAuth, upload.single('photo'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify the bathroom assignment exists and user is assigned to it
+      const bathroom = await storage.getBathroomAssignmentById(id);
+      
+      if (!bathroom) {
+        res.status(404).json({ error: "Bathroom assignment not found" });
+        return;
+      }
+      
+      // Verify the current user is assigned to this bathroom
+      if (bathroom.assignedTo !== req.user!.name) {
+        res.status(403).json({ error: "You can only complete bathrooms assigned to you" });
+        return;
+      }
+      const { Client } = await import("@replit/object-storage");
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      
+      if (!bucketId) {
+        throw new Error("Object storage is not configured");
+      }
+      
+      const client = new Client({ bucketId });
+      const privateDir = process.env.PRIVATE_OBJECT_DIR || ".private";
+      
+      const proofPhotos: string[] = [];
+      
+      // Handle photo upload if provided
+      if (req.file) {
+        const timestamp = Date.now();
+        const filename = `${timestamp}-${req.file.originalname}`;
+        const filePath = `${privateDir}/${filename}`;
+        
+        const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
+        
+        if (uploadResult.isErr()) {
+          console.error("Error uploading photo:", uploadResult.error);
+          res.status(500).json({ error: "Failed to upload photo" });
+          return;
+        }
+        
+        proofPhotos.push(filename);
+      }
+
+      const completed = await storage.completeBathroomAssignment(id, proofPhotos);
+      
+      if (!completed) {
+        res.status(404).json({ error: "Bathroom assignment not found" });
+        return;
+      }
+
+      res.json(completed);
+    } catch (error) {
+      console.error("Error completing bathroom:", error);
+      res.status(500).json({ error: "Failed to complete bathroom" });
+    }
+  });
+
   // GET /api/photos/:path - Get photo from object storage
   app.get("/api/photos/*", async (req, res) => {
     try {

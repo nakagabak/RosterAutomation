@@ -146,6 +146,39 @@ export default function RosterPage() {
     },
   });
 
+  const completeBathroomMutation = useMutation({
+    mutationFn: async ({ bathroomId, file }: { bathroomId: string; file: File | null }) => {
+      const formData = new FormData();
+      if (file) {
+        formData.append('photo', file);
+      }
+      const res = await fetch(`/api/bathrooms/${bathroomId}/complete`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Include cookies for authentication
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to complete bathroom');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/current-week'] });
+      toast({
+        title: "Success",
+        description: "Bathroom marked as complete!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to complete bathroom. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const tasks = (currentWeek as any)?.tasks || [];
   const bathrooms = (currentWeek as any)?.bathrooms || [];
 
@@ -169,6 +202,10 @@ export default function RosterPage() {
 
   const handleUpdateBathroom = (bathroomId: string, assignedTo: string, cleaningMode: 'basic' | 'deep') => {
     updateBathroomMutation.mutate({ bathroomId, assignedTo, cleaningMode });
+  };
+
+  const handleCompleteBathroom = (bathroomId: string, file: File | null) => {
+    completeBathroomMutation.mutate({ bathroomId, file });
   };
 
   if (isLoadingCurrent) {
@@ -278,6 +315,7 @@ export default function RosterPage() {
               {bathrooms.map((bathroom: any) => (
                 <BathroomCard
                   key={bathroom.id}
+                  bathroomId={bathroom.id}
                   bathroomNumber={bathroom.bathroomNumber}
                   assignedTo={bathroom.assignedTo}
                   cleaningMode={bathroom.cleaningMode}
@@ -285,6 +323,9 @@ export default function RosterPage() {
                   onUpdate={(assignedTo, cleaningMode) => 
                     handleUpdateBathroom(bathroom.id, assignedTo, cleaningMode)
                   }
+                  onComplete={handleCompleteBathroom}
+                  completedAt={bathroom.completedAt}
+                  currentUserName={user?.name}
                 />
               ))}
             </div>

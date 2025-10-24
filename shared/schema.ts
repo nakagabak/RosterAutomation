@@ -80,6 +80,8 @@ export const bathroomAssignments = pgTable("bathroom_assignments", {
   assignedTo: text("assigned_to").notNull(),
   cleaningMode: text("cleaning_mode").notNull(), // 'basic' or 'deep'
   rotationIndex: integer("rotation_index"), // For tracking position in rotation
+  completedAt: timestamp("completed_at"),
+  proofPhotos: text("proof_photos").array().notNull().default(sql`ARRAY[]::text[]`),
 });
 
 export const insertBathroomAssignmentSchema = createInsertSchema(bathroomAssignments).omit({

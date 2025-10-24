@@ -10,27 +10,38 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Check, X } from "lucide-react";
 import ResidentAvatar from "./ResidentAvatar";
+import TaskCompletionDialog from "./TaskCompletionDialog";
 
 interface BathroomCardProps {
+  bathroomId: string;
   bathroomNumber: number;
   assignedTo: string;
   cleaningMode: "basic" | "deep";
   residents: string[];
   onUpdate: (assignedTo: string, cleaningMode: "basic" | "deep") => void;
+  onComplete: (bathroomId: string, file: File | null) => void;
+  completedAt?: string | null;
+  currentUserName?: string;
 }
 
 export default function BathroomCard({
+  bathroomId,
   bathroomNumber,
   assignedTo,
   cleaningMode,
   residents,
-  onUpdate
+  onUpdate,
+  onComplete,
+  completedAt,
+  currentUserName
 }: BathroomCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [tempAssignedTo, setTempAssignedTo] = useState(assignedTo);
   const [tempMode, setTempMode] = useState(cleaningMode);
+  const [completionDialog, setCompletionDialog] = useState(false);
 
   const handleSave = () => {
     onUpdate(tempAssignedTo, tempMode);
@@ -42,6 +53,15 @@ export default function BathroomCard({
     setTempMode(cleaningMode);
     setIsEditing(false);
   };
+
+  const handleCheckboxChange = (checked: boolean) => {
+    if (checked) {
+      setCompletionDialog(true);
+    }
+  };
+
+  const isCompleted = !!completedAt;
+  const canComplete = currentUserName && assignedTo === currentUserName;
 
   return (
     <Card data-testid={`card-bathroom-${bathroomNumber}`}>
@@ -114,18 +134,39 @@ export default function BathroomCard({
           </>
         ) : (
           <>
-            <div className="flex items-center gap-2">
-              <ResidentAvatar name={assignedTo} size="sm" />
-              <div>
-                <p className="text-sm font-medium">{assignedTo}</p>
-                <p className="text-xs text-muted-foreground">
-                  {cleaningMode === "deep" ? "Deep Cleaning" : "Basic Cleaning"}
-                </p>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <ResidentAvatar name={assignedTo} size="sm" />
+                <div>
+                  <p className="text-sm font-medium">{assignedTo}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {cleaningMode === "deep" ? "Deep Cleaning" : "Basic Cleaning"}
+                  </p>
+                </div>
               </div>
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <Checkbox
+                checked={isCompleted}
+                onCheckedChange={handleCheckboxChange}
+                disabled={isCompleted || !canComplete}
+                data-testid={`checkbox-bathroom-${bathroomNumber}`}
+              />
+              <Label className="text-sm cursor-pointer">
+                {isCompleted ? "Completed" : "Mark as Complete"}
+              </Label>
             </div>
           </>
         )}
       </CardContent>
+
+      <TaskCompletionDialog
+        open={completionDialog}
+        onOpenChange={setCompletionDialog}
+        taskName={`Bathroom ${bathroomNumber} - ${cleaningMode === "deep" ? "Deep" : "Basic"} Cleaning`}
+        assignedTo={assignedTo}
+        onComplete={(file) => onComplete(bathroomId, file)}
+      />
     </Card>
   );
 }

@@ -51,11 +51,16 @@ export interface IStorage {
 
   // Bathroom Assignments
   getBathroomAssignmentsForRoster(rosterId: string): Promise<BathroomAssignment[]>;
+  getBathroomAssignmentById(id: string): Promise<BathroomAssignment | undefined>;
   createBathroomAssignment(assignment: InsertBathroomAssignment): Promise<BathroomAssignment>;
   updateBathroomAssignment(
     id: string,
     assignedTo: string,
     cleaningMode: string
+  ): Promise<BathroomAssignment | undefined>;
+  completeBathroomAssignment(
+    id: string,
+    proofPhotos: string[]
   ): Promise<BathroomAssignment | undefined>;
 }
 
@@ -170,6 +175,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(bathroomAssignments).where(eq(bathroomAssignments.rosterId, rosterId));
   }
 
+  async getBathroomAssignmentById(id: string): Promise<BathroomAssignment | undefined> {
+    const result = await db.select().from(bathroomAssignments).where(eq(bathroomAssignments.id, id));
+    return result[0];
+  }
+
   async createBathroomAssignment(assignment: InsertBathroomAssignment): Promise<BathroomAssignment> {
     const result = await db.insert(bathroomAssignments).values(assignment).returning();
     return result[0];
@@ -183,6 +193,18 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(bathroomAssignments)
       .set({ assignedTo, cleaningMode })
+      .where(eq(bathroomAssignments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async completeBathroomAssignment(
+    id: string,
+    proofPhotos: string[]
+  ): Promise<BathroomAssignment | undefined> {
+    const result = await db
+      .update(bathroomAssignments)
+      .set({ completedAt: new Date(), proofPhotos })
       .where(eq(bathroomAssignments.id, id))
       .returning();
     return result[0];
