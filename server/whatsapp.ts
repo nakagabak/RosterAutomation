@@ -1,4 +1,4 @@
-const WHATSAPP_GROUP_CHAT_ID = "120363405378873467@g.us";
+const WHATSAPP_GROUP_CHAT_ID = "120363422379819303@g.us";
 
 interface SendPhotoOptions {
   residentName: string;
