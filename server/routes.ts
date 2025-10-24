@@ -210,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Upload to object storage
         const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
         
-        if (uploadResult.isErr()) {
+        if (!uploadResult.ok) {
           console.error("Error uploading photo:", uploadResult.error);
           res.status(500).json({ error: "Failed to upload photo" });
           return;
@@ -314,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
         
-        if (uploadResult.isErr()) {
+        if (!uploadResult.ok) {
           console.error("Error uploading photo:", uploadResult.error);
           res.status(500).json({ error: "Failed to upload photo" });
           return;
@@ -371,11 +371,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await client.downloadAsBytes(fullPath);
       
-      if (result.isErr()) {
+      if (!result.ok) {
         throw result.error;
       }
       
-      const [fileBytes] = result.value;
+      const fileBytes = result.value;
       
       // Determine content type based on file extension
       const extension = photoPath.split('.').pop()?.toLowerCase();
