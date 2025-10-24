@@ -193,14 +193,9 @@ export default function RosterPage() {
             <div className="flex items-center gap-3">
               <div className="text-sm font-medium">
                 {(currentWeek as any)?.roster?.weekStartDate && (
-                  <div className="flex flex-col items-end">
-                    <span>
-                      Week {(currentWeek as any).roster.weekNumber}, {(currentWeek as any).roster.year}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date((currentWeek as any).roster.weekStartDate), 'MMM d')} - {format(addDays(new Date((currentWeek as any).roster.weekStartDate), 6), 'MMM d, yyyy')}
-                    </span>
-                  </div>
+                  <span>
+                    {format(new Date((currentWeek as any).roster.weekStartDate), 'MMM d')} - {format(addDays(new Date((currentWeek as any).roster.weekStartDate), 6), 'MMM d, yyyy')}
+                  </span>
                 )}
               </div>
               {user && (
@@ -268,6 +263,7 @@ export default function RosterPage() {
               onComplete={handleCompleteTask}
               onDelete={handleDeleteTask}
               isAdmin={user?.role === 'admin'}
+              currentUserName={user?.name}
             />
           </TabsContent>
 
@@ -320,11 +316,8 @@ export default function RosterPage() {
                     <div key={week.id} className="border border-border rounded-md p-6">
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold">
-                          Week {week.weekNumber}, {week.year}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
                           {format(new Date(week.weekStartDate), 'MMM d')} - {format(addDays(new Date(week.weekStartDate), 6), 'MMM d, yyyy')}
-                        </p>
+                        </h3>
                       </div>
                       <div className="space-y-3">
                         {userStats.map((stat) => (

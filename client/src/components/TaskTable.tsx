@@ -27,9 +27,10 @@ interface TaskTableProps {
   onComplete: (taskId: string, file: File | null) => void;
   onDelete: (taskId: string) => void;
   isAdmin?: boolean;
+  currentUserName?: string;
 }
 
-export default function TaskTable({ tasks, onComplete, onDelete, isAdmin = false }: TaskTableProps) {
+export default function TaskTable({ tasks, onComplete, onDelete, isAdmin = false, currentUserName }: TaskTableProps) {
   const [completionDialog, setCompletionDialog] = useState<{ open: boolean; task: Task | null }>({
     open: false,
     task: null
@@ -61,7 +62,7 @@ export default function TaskTable({ tasks, onComplete, onDelete, isAdmin = false
                   <Checkbox
                     checked={task.status === "completed"}
                     onCheckedChange={(checked) => handleCheckboxChange(task, checked as boolean)}
-                    disabled={task.status === "completed"}
+                    disabled={task.status === "completed" || (!!currentUserName && task.assignedTo !== currentUserName)}
                     data-testid={`checkbox-task-${task.id}`}
                   />
                 </TableCell>
