@@ -28,6 +28,12 @@ export async function sendCompletionPhotoToWhatsApp(options: SendPhotoOptions): 
     caption: caption,
   };
   
+  console.log("Sending WhatsApp notification:", {
+    chatId: WHATSAPP_GROUP_CHAT_ID,
+    photoUrl,
+    residentName,
+  });
+  
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -44,7 +50,7 @@ export async function sendCompletionPhotoToWhatsApp(options: SendPhotoOptions): 
     }
     
     const result = await response.json();
-    console.log("WhatsApp notification sent successfully:", result);
+    console.log("WhatsApp API response:", result);
   } catch (error) {
     console.error("Error sending WhatsApp notification:", error);
   }
