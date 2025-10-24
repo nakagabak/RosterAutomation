@@ -27,7 +27,12 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      setLocation("/");
+      // Redirect admin users directly to admin dashboard
+      if (user.role === "admin") {
+        setLocation("/admin");
+      } else {
+        setLocation("/");
+      }
     }
   }, [user, setLocation]);
 
