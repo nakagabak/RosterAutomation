@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, LogOut, User, Settings } from "lucide-react";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import WeekNavigator from "@/components/WeekNavigator";
 import StatsCard from "@/components/StatsCard";
 import TaskTable from "@/components/TaskTable";
@@ -193,9 +193,14 @@ export default function RosterPage() {
             <div className="flex items-center gap-3">
               <div className="text-sm font-medium">
                 {(currentWeek as any)?.roster?.weekStartDate && (
-                  <span>
-                    Week {(currentWeek as any).roster.weekNumber}, {(currentWeek as any).roster.year}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span>
+                      Week {(currentWeek as any).roster.weekNumber}, {(currentWeek as any).roster.year}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date((currentWeek as any).roster.weekStartDate), 'MMM d')} - {format(addDays(new Date((currentWeek as any).roster.weekStartDate), 6), 'MMM d, yyyy')}
+                    </span>
+                  </div>
                 )}
               </div>
               {user && (
@@ -293,7 +298,7 @@ export default function RosterPage() {
             <div>
               <h2 className="text-xl font-semibold mb-2">Task History</h2>
               <p className="text-sm text-muted-foreground">
-                View past weeks and completed tasks with proof photos
+                View resident performance across past weeks
               </p>
             </div>
             {isLoadingHistory ? (
@@ -302,39 +307,66 @@ export default function RosterPage() {
               </div>
             ) : (history as any) && (history as any).length > 0 ? (
               <div className="space-y-6">
-                {(history as any).map((week: any) => (
-                  <div key={week.id} className="border border-border rounded-md p-6">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold">
-                        Week {week.weekNumber}, {week.year}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(week.weekStartDate), 'MMMM d, yyyy')}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      {week.tasks.filter((t: any) => t.status === 'completed').map((task: any) => (
-                        <div key={task.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
-                          <div>
-                            <p className="font-medium">{task.name}</p>
-                            <p className="text-sm text-muted-foreground">{task.assignedTo}</p>
-                          </div>
-                        </div>
-                      ))}
-                      {week.tasks.filter((t: any) => t.status === 'completed').length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          No tasks completed this week
+                {(history as any).map((week: any) => {
+                  // Calculate per-user stats
+                  const userStats = RESIDENTS.map(resident => {
+                    const userTasks = week.tasks.filter((t: any) => t.assignedTo === resident);
+                    const completed = userTasks.filter((t: any) => t.status === 'completed').length;
+                    const missed = userTasks.filter((t: any) => t.status !== 'completed').length;
+                    return { name: resident, completed, missed, total: userTasks.length };
+                  }).filter(stat => stat.total > 0); // Only show users who had tasks
+
+                  return (
+                    <div key={week.id} className="border border-border rounded-md p-6">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold">
+                          Week {week.weekNumber}, {week.year}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(week.weekStartDate), 'MMM d')} - {format(addDays(new Date(week.weekStartDate), 6), 'MMM d, yyyy')}
                         </p>
-                      )}
+                      </div>
+                      <div className="space-y-3">
+                        {userStats.map((stat) => (
+                          <div key={stat.name} className="flex items-center justify-between p-4 bg-muted/30 rounded-md">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{stat.name}</p>
+                                <p className="text-xs text-muted-foreground">{stat.total} tasks assigned</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                                  ✓ {stat.completed} completed
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                                  ✗ {stat.missed} missed
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {userStats.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No tasks assigned this week
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="border border-border rounded-md p-12 text-center">
                 <p className="text-muted-foreground">No historical data available yet</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Task history will appear here once you complete tasks
+                  Task history will appear here once weeks complete
                 </p>
               </div>
             )}

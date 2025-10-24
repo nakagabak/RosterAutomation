@@ -1,15 +1,22 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { User, Shield } from "lucide-react";
+
+const ALL_USERS = [
+  { username: "nurilly", name: "Nurilly", role: "admin" },
+  { username: "illy", name: "Illy", role: "resident" },
+  { username: "atilla", name: "Atilla", role: "resident" },
+  { username: "allegra", name: "Allegra", role: "resident" },
+  { username: "perpetua", name: "Perpetua", role: "resident" },
+  { username: "eman", name: "Eman", role: "resident" },
+  { username: "dania", name: "Dania", role: "resident" },
+];
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation } = useAuth();
-  const [loginData, setLoginData] = useState({ username: "", password: "" });
 
   useEffect(() => {
     if (user) {
@@ -17,93 +24,49 @@ export default function AuthPage() {
     }
   }, [user, setLocation]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    loginMutation.mutate(loginData);
+  const handleSelectUser = (username: string) => {
+    // Passwordless login - just pass username (password matches username anyway)
+    loginMutation.mutate({ username, password: username });
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left side - Login Form */}
-      <div className="flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold">7SS Cleaning Roster</h1>
-            <p className="text-muted-foreground mt-2">Manage your cleaning duties efficiently</p>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Login</CardTitle>
-              <CardDescription>Enter your credentials to access your account</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-username">Username</Label>
-                  <Input
-                    id="login-username"
-                    type="text"
-                    value={loginData.username}
-                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                    required
-                    data-testid="input-login-username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                    data-testid="input-login-password"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loginMutation.isPending}
-                  data-testid="button-login"
-                >
-                  {loginMutation.isPending ? "Logging in..." : "Login"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <div className="text-center text-sm text-muted-foreground">
-            <p>Fixed accounts only. Contact the administrator if you need access.</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl md:text-5xl font-bold">7SS Cleaning Roster</h1>
+          <p className="text-lg text-muted-foreground">Who's using the app?</p>
         </div>
-      </div>
 
-      {/* Right side - Hero */}
-      <div className="hidden lg:flex bg-primary text-primary-foreground p-12 items-center justify-center">
-        <div className="max-w-md space-y-6">
-          <h2 className="text-4xl font-bold">Streamline Your Cleaning Schedule</h2>
-          <p className="text-lg opacity-90">
-            Automated weekly task rotation, bathroom assignments, and completion tracking for the first floor of 7SS.
-          </p>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-2">
-              <span className="text-xl">✓</span>
-              <span>Automatic task rotation every Monday</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-xl">✓</span>
-              <span>Upload photo proof of completed tasks</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-xl">✓</span>
-              <span>Editable bathroom assignments with Basic/Deep cleaning modes</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-xl">✓</span>
-              <span>View historical rosters and completion rates</span>
-            </li>
-          </ul>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {ALL_USERS.map((profile) => (
+            <Card
+              key={profile.username}
+              className="cursor-pointer transition-all hover-elevate active-elevate-2 border-2"
+              onClick={() => handleSelectUser(profile.username)}
+              data-testid={`profile-${profile.username}`}
+            >
+              <CardContent className="p-6 flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-10 h-10 md:w-12 md:h-12 text-primary" />
+                  </div>
+                  {profile.role === "admin" && (
+                    <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                      <Shield className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-lg">{profile.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{profile.role}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center text-sm text-muted-foreground">
+          <p>Select your profile to access the cleaning roster</p>
         </div>
       </div>
     </div>
