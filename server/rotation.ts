@@ -187,8 +187,6 @@ export class RosterRotationManager {
           isCustomTask: task.isCustomTask,
           status: completion ? "completed" : "pending",
           completedAt: completion?.completedAt,
-          proofCount: completion?.proofPhotos?.length || 0,
-          proofPhotos: completion?.proofPhotos || [],
         };
       })
     );
@@ -201,8 +199,6 @@ export class RosterRotationManager {
         assignedTo: b.assignedTo,
         cleaningMode: b.cleaningMode,
         completedAt: b.completedAt,
-        proofCount: b.proofPhotos?.length || 0,
-        proofPhotos: b.proofPhotos || [],
       })),
     };
   }

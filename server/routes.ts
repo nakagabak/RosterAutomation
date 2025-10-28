@@ -1,14 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import multer from "multer";
 import { storage } from "./storage";
 import { rotationManager, ALL_RESIDENTS } from "./rotation";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 import { format } from "date-fns";
-
-// Configure multer for memory storage (we'll upload to object storage)
-const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware to check if user is authenticated
 function requireAuth(req: any, res: any, next: any) {
@@ -27,30 +23,6 @@ function requireAdmin(req: any, res: any, next: any) {
     return res.status(403).json({ error: "Admin access required" });
   }
   next();
-}
-
-// Helper to extract relative directory path from PRIVATE_OBJECT_DIR
-function getPrivateDir(): string {
-  let dir = process.env.PRIVATE_OBJECT_DIR || ".private";
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  
-  // Remove trailing slashes
-  dir = dir.replace(/\/+$/, '');
-  
-  // If bucketId is present, remove bucket prefix (with or without leading slash)
-  if (bucketId) {
-    if (dir.startsWith(`/${bucketId}`)) {
-      dir = dir.substring(`/${bucketId}`.length);
-    } else if (dir.startsWith(bucketId)) {
-      dir = dir.substring(bucketId.length);
-    }
-  }
-  
-  // Remove leading slash if present
-  dir = dir.replace(/^\//, '');
-  
-  // If dir is empty, return empty string (photos will be at bucket root)
-  return dir || '';
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -207,55 +179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/tasks/:id/complete - Mark task as complete with required photo proof
-  app.post("/api/tasks/:id/complete", upload.single('photo'), async (req, res) => {
+  // POST /api/tasks/:id/complete - Mark task as complete
+  app.post("/api/tasks/:id/complete", async (req, res) => {
     try {
       const { id } = req.params;
-      
-      // Photo is required for task completion
-      if (!req.file) {
-        res.status(400).json({ error: "Photo proof is required to complete a task" });
-        return;
-      }
-      
-      const proofPhotos: string[] = [];
-
-      // Store photo in object storage
-      if (req.file) {
-        const { Client } = await import("@replit/object-storage");
-        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-        
-        if (!bucketId) {
-          res.status(500).json({ error: "Object storage is not configured" });
-          return;
-        }
-        
-        const client = new Client({ bucketId });
-        
-        // Get the private directory path (relative to bucket root)
-        const privateDir = getPrivateDir();
-        
-        // Generate unique filename with timestamp
-        const timestamp = Date.now();
-        const filename = `${timestamp}-${req.file.originalname}`;
-        const filePath = privateDir ? `${privateDir}/${filename}` : filename;
-        
-        // Upload to object storage
-        const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
-        
-        if (!uploadResult.ok) {
-          console.error("Error uploading photo:", uploadResult.error);
-          res.status(500).json({ error: "Failed to upload photo" });
-          return;
-        }
-        
-        proofPhotos.push(filename);
-      }
 
       // Create task completion record
       const completion = await storage.createTaskCompletion({
         taskId: id,
-        proofPhotos,
       });
 
       res.json(completion);
@@ -294,8 +225,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/bathrooms/:id/complete - Mark bathroom as complete with required photo
-  app.post("/api/bathrooms/:id/complete", requireAuth, upload.single('photo'), async (req, res) => {
+  // POST /api/bathrooms/:id/complete - Mark bathroom as complete
+  app.post("/api/bathrooms/:id/complete", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -312,45 +243,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(403).json({ error: "You can only complete bathrooms assigned to you" });
         return;
       }
-      
-      // Photo is required for bathroom completion
-      if (!req.file) {
-        res.status(400).json({ error: "Photo proof is required to complete bathroom cleaning" });
-        return;
-      }
-      
-      const { Client } = await import("@replit/object-storage");
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      
-      if (!bucketId) {
-        throw new Error("Object storage is not configured");
-      }
-      
-      const client = new Client({ bucketId });
-      
-      // Get the private directory path (relative to bucket root)
-      const privateDir = getPrivateDir();
-      
-      const proofPhotos: string[] = [];
-      
-      // Handle photo upload if provided
-      if (req.file) {
-        const timestamp = Date.now();
-        const filename = `${timestamp}-${req.file.originalname}`;
-        const filePath = privateDir ? `${privateDir}/${filename}` : filename;
-        
-        const uploadResult = await client.uploadFromBytes(filePath, req.file.buffer);
-        
-        if (!uploadResult.ok) {
-          console.error("Error uploading photo:", uploadResult.error);
-          res.status(500).json({ error: "Failed to upload photo" });
-          return;
-        }
-        
-        proofPhotos.push(filename);
-      }
 
-      const completed = await storage.completeBathroomAssignment(id, proofPhotos);
+      const completed = await storage.completeBathroomAssignment(id);
       
       if (!completed) {
         res.status(404).json({ error: "Bathroom assignment not found" });
@@ -361,46 +255,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing bathroom:", error);
       res.status(500).json({ error: "Failed to complete bathroom" });
-    }
-  });
-
-  // GET /api/photos/:path - Get photo from object storage
-  app.get("/api/photos/*", async (req, res) => {
-    try {
-      const { Client } = await import("@replit/object-storage");
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      
-      if (!bucketId) {
-        throw new Error("Object storage is not configured");
-      }
-      
-      const client = new Client({ bucketId });
-      
-      // Get the path after /api/photos/
-      const photoPath = req.path.replace('/api/photos/', '');
-      
-      // Get the private directory path (relative to bucket root)
-      const privateDir = getPrivateDir();
-      
-      const fullPath = privateDir ? `${privateDir}/${photoPath}` : photoPath;
-
-      const result = await client.downloadAsBytes(fullPath);
-      
-      if (!result.ok) {
-        throw result.error;
-      }
-      
-      const fileBytes = result.value;
-      
-      // Determine content type based on file extension
-      const extension = photoPath.split('.').pop()?.toLowerCase();
-      const contentType = extension === 'png' ? 'image/png' : 'image/jpeg';
-      
-      res.set('Content-Type', contentType);
-      res.send(fileBytes);
-    } catch (error) {
-      console.error("Error fetching photo:", error);
-      res.status(404).json({ error: "Photo not found" });
     }
   });
 

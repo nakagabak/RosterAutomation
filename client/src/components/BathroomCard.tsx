@@ -22,7 +22,7 @@ interface BathroomCardProps {
   cleaningMode: "basic" | "deep";
   residents: string[];
   onUpdate: (assignedTo: string, cleaningMode: "basic" | "deep") => void;
-  onComplete: (bathroomId: string, file: File | null) => void;
+  onComplete: (bathroomId: string) => void;
   completedAt?: string | null;
   currentUserName?: string;
 }
@@ -165,7 +165,7 @@ export default function BathroomCard({
         onOpenChange={setCompletionDialog}
         taskName={`Bathroom ${bathroomNumber} - ${cleaningMode === "deep" ? "Deep" : "Basic"} Cleaning`}
         assignedTo={assignedTo}
-        onComplete={(file) => onComplete(bathroomId, file)}
+        onComplete={() => onComplete(bathroomId)}
       />
     </Card>
   );

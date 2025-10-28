@@ -11,7 +11,6 @@ import TaskTable from "@/components/TaskTable";
 import BathroomCard from "@/components/BathroomCard";
 import AddTaskDialog from "@/components/AddTaskDialog";
 import ThemeToggle from "@/components/ThemeToggle";
-import PhotoGallery from "@/components/PhotoGallery";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -82,23 +81,8 @@ export default function RosterPage() {
 
   // Complete task mutation
   const completeTaskMutation = useMutation({
-    mutationFn: async ({ taskId, file }: { taskId: string; file: File | null }) => {
-      const formData = new FormData();
-      if (file) {
-        formData.append('photo', file);
-      }
-      
-      const res = await fetch(`/api/tasks/${taskId}/complete`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to complete task');
-      }
-      
+    mutationFn: async (taskId: string) => {
+      const res = await apiRequest('POST', `/api/tasks/${taskId}/complete`);
       return res.json();
     },
     onSuccess: () => {
@@ -149,20 +133,8 @@ export default function RosterPage() {
   });
 
   const completeBathroomMutation = useMutation({
-    mutationFn: async ({ bathroomId, file }: { bathroomId: string; file: File | null }) => {
-      const formData = new FormData();
-      if (file) {
-        formData.append('photo', file);
-      }
-      const res = await fetch(`/api/bathrooms/${bathroomId}/complete`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Include cookies for authentication
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to complete bathroom');
-      }
+    mutationFn: async (bathroomId: string) => {
+      const res = await apiRequest('POST', `/api/bathrooms/${bathroomId}/complete`);
       return res.json();
     },
     onSuccess: () => {
@@ -190,8 +162,8 @@ export default function RosterPage() {
     overdue: 0, // We can implement overdue logic based on dates if needed
   };
 
-  const handleCompleteTask = (taskId: string, file: File | null) => {
-    completeTaskMutation.mutate({ taskId, file });
+  const handleCompleteTask = (taskId: string) => {
+    completeTaskMutation.mutate(taskId);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -206,8 +178,8 @@ export default function RosterPage() {
     updateBathroomMutation.mutate({ bathroomId, assignedTo, cleaningMode });
   };
 
-  const handleCompleteBathroom = (bathroomId: string, file: File | null) => {
-    completeBathroomMutation.mutate({ bathroomId, file });
+  const handleCompleteBathroom = (bathroomId: string) => {
+    completeBathroomMutation.mutate(bathroomId);
   };
 
   if (isLoadingCurrent) {
@@ -304,8 +276,6 @@ export default function RosterPage() {
               isAdmin={user?.role === 'admin'}
               currentUserName={user?.name}
             />
-            
-            <PhotoGallery currentWeek={currentWeek} />
           </TabsContent>
 
           <TabsContent value="bathrooms" className="space-y-4">

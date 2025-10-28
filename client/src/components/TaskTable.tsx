@@ -24,7 +24,7 @@ interface Task {
 
 interface TaskTableProps {
   tasks: Task[];
-  onComplete: (taskId: string, file: File | null) => void;
+  onComplete: (taskId: string) => void;
   onDelete: (taskId: string) => void;
   isAdmin?: boolean;
   currentUserName?: string;
@@ -105,7 +105,7 @@ export default function TaskTable({ tasks, onComplete, onDelete, isAdmin = false
           onOpenChange={(open) => setCompletionDialog({ open, task: null })}
           taskName={completionDialog.task.name}
           assignedTo={completionDialog.task.assignedTo}
-          onComplete={(file) => onComplete(completionDialog.task!.id, file)}
+          onComplete={() => onComplete(completionDialog.task!.id)}
         />
       )}
     </>

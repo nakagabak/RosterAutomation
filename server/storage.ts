@@ -59,8 +59,7 @@ export interface IStorage {
     cleaningMode: string
   ): Promise<BathroomAssignment | undefined>;
   completeBathroomAssignment(
-    id: string,
-    proofPhotos: string[]
+    id: string
   ): Promise<BathroomAssignment | undefined>;
 }
 
@@ -199,12 +198,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeBathroomAssignment(
-    id: string,
-    proofPhotos: string[]
+    id: string
   ): Promise<BathroomAssignment | undefined> {
     const result = await db
       .update(bathroomAssignments)
-      .set({ completedAt: new Date(), proofPhotos })
+      .set({ completedAt: new Date() })
       .where(eq(bathroomAssignments.id, id))
       .returning();
     return result[0];

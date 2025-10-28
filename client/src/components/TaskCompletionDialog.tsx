@@ -10,15 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useDropzone } from "react-dropzone";
-import { Upload, X, ImageIcon } from "lucide-react";
 
 interface TaskCompletionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   taskName: string;
   assignedTo: string;
-  onComplete: (file: File | null) => void;
+  onComplete: () => void;
 }
 
 export default function TaskCompletionDialog({
@@ -29,39 +27,11 @@ export default function TaskCompletionDialog({
   onComplete
 }: TaskCompletionDialogProps) {
   const [isCompleted, setIsCompleted] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg']
-    },
-    maxFiles: 1,
-    onDrop: (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        const file = acceptedFiles[0];
-        setSelectedFile(file);
-        
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  });
-
-  const removeFile = () => {
-    setSelectedFile(null);
-    setPreview(null);
-  };
 
   const handleSubmit = () => {
-    if (isCompleted && selectedFile) {
-      onComplete(selectedFile);
+    if (isCompleted) {
+      onComplete();
       setIsCompleted(false);
-      setSelectedFile(null);
-      setPreview(null);
       onOpenChange(false);
     }
   };
@@ -69,8 +39,6 @@ export default function TaskCompletionDialog({
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setIsCompleted(false);
-      setSelectedFile(null);
-      setPreview(null);
     }
     onOpenChange(newOpen);
   };
@@ -98,64 +66,6 @@ export default function TaskCompletionDialog({
               I confirm this task has been completed
             </Label>
           </div>
-
-          <div className="space-y-2">
-            <Label>Upload proof photo (required)</Label>
-            
-            {!selectedFile ? (
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${
-                  isDragActive 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover-elevate'
-                }`}
-                data-testid="dropzone-upload"
-              >
-                <input {...getInputProps()} />
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  {isDragActive
-                    ? 'Drop the image here'
-                    : 'Drag & drop an image, or click to select'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  PNG, JPG up to 10MB
-                </p>
-              </div>
-            ) : (
-              <div className="border rounded-md p-3 space-y-3" data-testid="file-preview">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm truncate max-w-[250px]">
-                      {selectedFile.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({(selectedFile.size / 1024).toFixed(1)} KB)
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeFile}
-                    data-testid="button-remove-file"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {preview && (
-                  <img 
-                    src={preview} 
-                    alt="Preview" 
-                    className="w-full h-48 object-cover rounded-md"
-                    data-testid="img-preview"
-                  />
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
         <DialogFooter>
@@ -168,7 +78,7 @@ export default function TaskCompletionDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isCompleted || !selectedFile}
+            disabled={!isCompleted}
             data-testid="button-submit-completion"
           >
             Mark Complete

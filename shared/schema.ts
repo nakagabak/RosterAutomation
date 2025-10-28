@@ -54,19 +54,16 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 
-// Task completions with proof photos
+// Task completions
 export const taskCompletions = pgTable("task_completions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").notNull(),
   completedAt: timestamp("completed_at").notNull().defaultNow(),
-  proofPhotos: text("proof_photos").array().notNull().default(sql`ARRAY[]::text[]`), // Array of object storage paths
 });
 
 export const insertTaskCompletionSchema = createInsertSchema(taskCompletions).omit({
   id: true,
   completedAt: true,
-}).extend({
-  proofPhotos: z.array(z.string()).default([]),
 });
 
 export type InsertTaskCompletion = z.infer<typeof insertTaskCompletionSchema>;
@@ -81,7 +78,6 @@ export const bathroomAssignments = pgTable("bathroom_assignments", {
   cleaningMode: text("cleaning_mode").notNull(), // 'basic' or 'deep'
   rotationIndex: integer("rotation_index"), // For tracking position in rotation
   completedAt: timestamp("completed_at"),
-  proofPhotos: text("proof_photos").array().notNull().default(sql`ARRAY[]::text[]`),
 });
 
 export const insertBathroomAssignmentSchema = createInsertSchema(bathroomAssignments).omit({
