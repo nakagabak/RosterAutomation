@@ -7,12 +7,13 @@ import {
 import { User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { setToken, clearToken } from "../lib/auth";
 
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
+  loginMutation: UseMutationResult<{ user: SelectUser; token: string }, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
 };
 
@@ -34,10 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      const data = await res.json();
+      return data;
     },
-    onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (data: { user: SelectUser; token: string }) => {
+      setToken(data.token);
+      queryClient.setQueryData(["/api/user"], data.user);
     },
     onError: (error: Error) => {
       toast({
@@ -50,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      clearToken();
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);

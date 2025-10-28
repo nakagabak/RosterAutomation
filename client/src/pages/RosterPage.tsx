@@ -60,7 +60,7 @@ export default function RosterPage() {
   // Delete task mutation
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
-      const res = await apiRequest('DELETE', `/api/tasks/${taskId}`);
+      const res = await apiRequest('DELETE', `/api/tasks/${taskId}/delete`);
       return res.json();
     },
     onSuccess: () => {
@@ -113,7 +113,7 @@ export default function RosterPage() {
       assignedTo: string; 
       cleaningMode: 'basic' | 'deep' 
     }) => {
-      const res = await apiRequest('PUT', `/api/bathrooms/${bathroomId}`, { assignedTo, cleaningMode });
+      const res = await apiRequest('POST', `/api/bathrooms/${bathroomId}/update`, { assignedTo, cleaningMode });
       return res.json();
     },
     onSuccess: () => {
