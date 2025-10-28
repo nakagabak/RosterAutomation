@@ -1,39 +1,128 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { rotationManager, ALL_RESIDENTS } from "./rotation";
-import { setupAuth } from "./auth";
+import { 
+  verifyToken, 
+  extractTokenFromHeader, 
+  createAuthResponse,
+  comparePasswords,
+  type TokenPayload 
+} from "./auth";
 import { z } from "zod";
 import { format } from "date-fns";
 
+// Extend Express Request to include user
+interface AuthRequest extends Request {
+  user?: TokenPayload;
+}
+
 // Middleware to check if user is authenticated
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
+function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  const token = extractTokenFromHeader(req.headers.authorization);
+  
+  if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
+
+  const payload = verifyToken(token);
+  
+  if (!payload) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  req.user = payload;
   next();
 }
 
 // Middleware to check if user is admin
-function requireAdmin(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
+function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  const token = extractTokenFromHeader(req.headers.authorization);
+  
+  if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
-  if (req.user.role !== "admin") {
+
+  const payload = verifyToken(token);
+  
+  if (!payload) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  if (payload.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
+
+  req.user = payload;
   next();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up authentication (adds /api/login, /api/logout, /api/user)
-  setupAuth(app);
-
   // Initialize current week on server startup
   await rotationManager.ensureCurrentWeekRoster();
 
-  // GET /api/current-week - Get current week's roster
-  app.get("/api/current-week", async (req, res) => {
+  // POST /api/login - Authenticate user and return JWT token
+  app.post("/api/login", async (req, res) => {
+    try {
+      const schema = z.object({
+        username: z.string().min(1),
+        password: z.string().optional(),
+      });
+
+      const { username, password } = schema.parse(req.body);
+      const user = await storage.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Admin login requires password
+      if (user.role === "admin") {
+        if (!password) {
+          return res.status(401).json({ error: "Password required for admin" });
+        }
+
+        const valid = await comparePasswords(password, user.password);
+        if (!valid) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+      }
+
+      const authResponse = createAuthResponse(user);
+      res.json(authResponse);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid request data" });
+      } else {
+        console.error("Login error:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  });
+
+  // GET /api/user - Get current user info from JWT token
+  app.get("/api/user", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.user.userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password, ...sanitized } = user;
+      res.json({ user: sanitized });
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/current-week - Get current week's roster (requires auth)
+  app.get("/api/current-week", requireAuth, async (req, res) => {
     try {
       const roster = await rotationManager.ensureCurrentWeekRoster();
       const data = await rotationManager.getRosterData(roster.id);
@@ -53,8 +142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/history - Get all weekly rosters
-  app.get("/api/history", async (req, res) => {
+  // GET /api/history - Get all weekly rosters (requires auth)
+  app.get("/api/history", requireAuth, async (req, res) => {
     try {
       const rosters = await storage.getAllWeeklyRosters();
       
@@ -179,8 +268,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/tasks/:id/complete - Mark task as complete
-  app.post("/api/tasks/:id/complete", async (req, res) => {
+  // POST /api/tasks/:id/complete - Mark task as complete (requires auth)
+  app.post("/api/tasks/:id/complete", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
 
@@ -196,8 +285,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PUT /api/bathrooms/:id - Update bathroom assignment
-  app.put("/api/bathrooms/:id", async (req, res) => {
+  // PUT /api/bathrooms/:id - Update bathroom assignment (requires auth)
+  app.put("/api/bathrooms/:id", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         assignedTo: z.enum(ALL_RESIDENTS as [string, ...string[]]),
@@ -239,7 +328,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify the current user is assigned to this bathroom
-      if (bathroom.assignedTo !== req.user!.name) {
+      const currentUser = req as AuthRequest;
+      if (bathroom.assignedTo !== currentUser.user!.name) {
         res.status(403).json({ error: "You can only complete bathrooms assigned to you" });
         return;
       }
